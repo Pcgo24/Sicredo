@@ -1,16 +1,17 @@
-# sicredo
+# SICREDO
 
-A new Flutter project.
+## App de Controle Financeiro em Flutter
 
-## Getting Started
+Um aplicativo móvel simples para controle de finanças pessoais, desenvolvido com Flutter. O objetivo deste projeto é criar uma experiência de usuário limpa e intuitiva para monitorar despesas e receitas, ajudando os usuários a atingirem seus objetivos financeiros.
 
-This project is a starting point for a Flutter application.
+## ✨ Funcionalidades
 
-A few resources to get you started if this is your first Flutter project:
+Atualmente, o aplicativo possui as seguintes funcionalidades implementadas:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Tela de Boas-Vindas: Uma introdução amigável ao aplicativo.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Dashboard Principal: Exibe um resumo do saldo atual e um gráfico de pizza com a distribuição das despesas por categoria.
+
+- Tela de Perfil: Uma área de conta do usuário com um resumo de gastos e opções de navegação.
+
+- Sistema de Rotas Nomeadas: Uma arquitetura de navegação centralizada e escalável para gerenciar o fluxo entre as telas
