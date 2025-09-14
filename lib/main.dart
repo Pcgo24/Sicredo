@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:sicredo/routes/app_routes.dart';
-import 'package:sicredo/routes/router.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/auth_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/cotacao_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(SicredoApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
+class SicredoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sicredo',
       theme: ThemeData(
-        primarySwatch: Colors.red,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        primarySwatch: Colors.green,
       ),
-      initialRoute: AppRoutes.welcome,
-      onGenerateRoute: AppRouter.generateRoute,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => WelcomeScreen(),
+        '/auth': (context) => AuthScreen(),
+        '/home': (context) => HomeScreen(),
+        '/cotacao': (context) => CotacoesScreen(),
+      },
+      debugShowCheckedModeBanner: false,
     );
   }
 }
