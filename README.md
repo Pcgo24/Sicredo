@@ -108,6 +108,8 @@ lib/
 
 ---
 
+
+
 ## Próximos Passos
 
 - Persistência local dos dados (Hive, SharedPreferences, etc).
@@ -116,6 +118,36 @@ lib/
 - Melhorias de acessibilidade e internacionalização.
 
 ---
+## Testes Automatizados
+O projeto inclui uma suíte de testes automatizados seguindo os padrões do Flutter para garantir a qualidade, estabilidade e o correto funcionamento das funcionalidades e regras de negócio.
+
+A cobertura de testes foi dividida nas três principais categorias:
+
+- **Testes Unitários (Unit Tests)**:
+
+  - Validam a lógica pura de classes e funções, sem depender da UI.
+
+  - **Cobertura**: Testamos o `CotacaoService` (em `test/core/`) mockando as chamadas HTTP. Garantimos que o serviço processa corretamente tanto uma resposta de sucesso (200) quanto uma resposta de **erro (404)** da API.
+
+- **Testes de Widget (Widget Tests)**:
+
+  - Validam a renderização e a interatividade de widgets e telas de forma isolada.
+
+  - **Cobertura**:
+
+    - `WelcomeScreen` (em `test/screens/`): Garante que o título, ícone e o botão "Começar" são renderizados corretamente após as animações.
+
+    - `AuthScreen` (em `test/screens/`): Garante que as mensagens de erro de validação (ex: "E-mail inválido") são exibidas quando o usuário tenta submeter o formulário de login vazio.
+
+- **Testes de Integração (Integration Tests)**:
+
+  - Validam fluxos completos do aplicativo, simulando um usuário real no app em execução.
+
+  - **Cobertura**:
+
+    - **Fluxo de Autenticação (TI-01)**: Simula o usuário desde a `WelcomeScreen`, tocando em "Começar", preenchendo o login na `AuthScreen` e verificando se ele chega com sucesso à `HomeScreen`.
+
+    - **Fluxo de "Adicionar Saldo" (TI-02)**: Simula o usuário já logado na `HomeScreen`, toca em "Adicionar Saldo", preenche o formulário no `AlertDialog` e verifica se o "Saldo Total" e a lista de extrato na `HomeScreen` são atualizados corretamente.
 
 ## Equipe
 
