@@ -16,17 +16,16 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-<<<<<<< HEAD
   integration_test:
     sdk: flutter
+
+  http: ^1.2.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-=======
->>>>>>> 26963ab136b7561a9b9cce16be5bd4bbc049c2ab
   flutter_lints: ^5.0.0
 
 flutter:

@@ -175,19 +175,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             fontWeight: FontWeight.w700,
             fontSize: 28,
           ),
-<<<<<<< HEAD
-
-          IconButton(
-            icon: const Icon(Icons.home),
-            onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.welcome);
-            },
-          ),
-        ],
-=======
         ),
         centerTitle: true,
->>>>>>> 26963ab136b7561a9b9cce16be5bd4bbc049c2ab
       ),
       body: SafeArea(
         child: Padding(
@@ -485,28 +474,6 @@ class _ResumoCard extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                children: List.generate(dataMap.length, (index) {
-                  final entry = dataMap.entries.elementAt(index);
-                  return ListTile(
-                    leading: CircleAvatar(
-                      radius: 10,
-                      backgroundColor: colorList[index],
-                    ),
-                    title: Text(entry.key),
-                    trailing: Text(
-                      '${entry.value.toStringAsFixed(0)}%',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  );
-                }),
-              ),
             ),
           ],
         ),

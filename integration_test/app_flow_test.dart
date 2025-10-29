@@ -1,81 +1,106 @@
-// integration_test/app_flow_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-// Importe seu app principal (main.dart)
 import 'package:sicredo/main.dart' as app;
+import 'package:sicredo/widgets/form_input.dart';
 
 void main() {
-  // Inicializa o binding de teste de integração
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Fluxos de Navegação Principais', () {
-    testWidgets('TI-01: Fluxo de Welcome para Home', (
-      WidgetTester tester,
-    ) async {
+  group('Fluxos de Integração do App', () {
+    testWidgets('TI-01: Fluxo de Welcome -> Auth -> Home',
+        (WidgetTester tester) async {
       // Arrange: Inicia o app
       app.main();
-
-      // Aguarda o app carregar
       await tester.pumpAndSettle();
 
-      // Assert (Verificação inicial): Estamos na WelcomeScreen
-      expect(find.text('Bem-vindo ao Sicredo Finanças!'), findsOneWidget);
-      expect(find.text('SALDO ATUAL'), findsNothing);
+      // --- TELA DE WELCOME ---
+      // Assert:
+      expect(find.text('Bem-vindo(a) ao Sicredo'), findsOneWidget);
 
-      // Act: Tocar no botão "Começar"
+      // Act:
       await tester.tap(find.text('Começar'));
-
-      // Aguarda a navegação e animações terminarem
       await tester.pumpAndSettle();
 
-      // Assert (Verificação final): Estamos na HomeScreen
-      expect(find.text('SALDO ATUAL'), findsOneWidget);
-      // Verifica se a WelcomeScreen foi removida (devido ao pushReplacementNamed)
-      expect(find.text('Bem-vindo ao Sicredo Finanças!'), findsNothing);
+      // Assert: Confirma que estamos na AuthScreen
+      expect(find.text('Entrar no Sicredo'), findsOneWidget);
+
+      // Act: Preenche o formulário de login
+      // Encontra os widgets FormInput pelo seu 'label' (hintText)
+      final emailField = find.widgetWithText(FormInput, 'E-mail');
+      final passField = find.widgetWithText(FormInput, 'Senha');
+
+      await tester.enterText(emailField, 'teste@integracao.com');
+      await tester.enterText(passField, '123456');
+
+      await tester.tap(find.text('Entrar'));
+      await tester.pumpAndSettle();
+
+      // --- TELA DE HOME ---
+      // Assert: Confirma que estamos na HomeScreen
+      expect(find.text('Saldo Total'), findsOneWidget);
+      // Confirma que a tela de Login sumiu
+      expect(find.text('Entrar no Sicredo'), findsNothing);
     });
 
-    // integration_test/app_flow_test.dart
-
-    testWidgets('TI-02: Fluxo de Home para Slaoq (Minha Conta) e voltar', (
-      WidgetTester tester,
-    ) async {
-      // --- CORREÇÃO ---
-      // Vamos criar um localizador (Finder) específico para o TÍTULO da tela,
-      // procurando por um texto "Minha Conta" que seja filho de uma AppBar.
-      final slaOqScreenTitle = find.descendant(
-        of: find.byType(AppBar),
-        matching: find.text('Minha Conta'),
-      );
-      // --- FIM DA CORREÇÃO ---
-
-      // Arrange: Inicia o app e navega para a Home
+    testWidgets('TI-02: Fluxo de Adicionar Saldo na HomeScreen',
+        (WidgetTester tester) async {
+      // Arrange: Inicia o app e faz o login
       app.main();
       await tester.pumpAndSettle();
       await tester.tap(find.text('Começar'));
       await tester.pumpAndSettle();
-
-      // Assert (Verificação inicial): Estamos na HomeScreen
-      expect(find.text('Meu Dashboard'), findsOneWidget);
-      // Usamos nosso localizador específico: o TÍTULO "Minha Conta" não deve existir
-      expect(slaOqScreenTitle, findsNothing);
-
-      // Act 1: Tocar no ícone de Configurações (settings)
-      await tester.tap(find.byIcon(Icons.settings));
+      await tester.enterText(
+          find.widgetWithText(FormInput, 'E-mail'), 'a@b.com');
+      await tester.enterText(find.widgetWithText(FormInput, 'Senha'), '123456');
+      await tester.tap(find.text('Entrar'));
       await tester.pumpAndSettle();
 
-      // Assert 1: Estamos na SlaoqScreen
-      // Agora o teste procura especificamente pelo TÍTULO e espera encontrar 1
-      expect(slaOqScreenTitle, findsOneWidget);
+      // --- TELA DE HOME (Estado Inicial) ---
 
-      // Act 2: Tocar no botão "Voltar" da AppBar
-      await tester.tap(find.byIcon(Icons.arrow_back));
-      await tester.pumpAndSettle();
+      // No início, o saldo é 0.0, então a Key é ValueKey(0.0)
+      final initialBalanceFinder = find.byKey(const ValueKey(0.0));
 
-      // Assert 2: Estamos de volta à HomeScreen
-      expect(find.text('Meu Dashboard'), findsOneWidget);
-      // E o TÍTULO "Minha Conta" deve sumir novamente
-      expect(slaOqScreenTitle, findsNothing);
+      // Assert
+      expect(initialBalanceFinder, findsOneWidget);
+      expect(
+          find.text('Nenhum saldo ou gasto registrado ainda.'), findsOneWidget);
+
+      // Act: Adicionar um novo saldo
+      // 1. Toca em "Adicionar Saldo"
+      await tester.tap(find.text('Adicionar Saldo'));
+      await tester.pumpAndSettle(); // Aguarda o Dialog aparecer
+
+      // 2. Encontra os campos do formulário NO DIALOG
+      final dialogFormFields = find.byType(TextFormField);
+      final nomeField = dialogFormFields.first;
+      final valorField = dialogFormFields.last;
+
+      // 3. Preenche o formulário do dialog
+      await tester.enterText(nomeField, 'Salário');
+      await tester.enterText(valorField, '1200.50');
+
+      // 4. Toca em "Salvar" (no Dialog)
+      await tester.tap(find.text('Salvar'));
+      await tester
+          .pumpAndSettle();
+
+      // --- TELA DE HOME (Estado Final) ---
+      final updatedBalanceFinder = find.byKey(const ValueKey(1200.50));
+
+      // Assert:
+      // 1. O saldo total foi atualizado (procurando pela nova Key)
+      expect(updatedBalanceFinder, findsOneWidget);
+      // 2. O saldo antigo (Key 0.0) não existe mais
+      expect(initialBalanceFinder, findsNothing);
+
+      // 3. A lista de extrato foi atualizada com o item "Salário"
+      expect(find.text('Salário'), findsOneWidget);
+      // 4. O valor formatado está na lista
+      expect(find.text('+ R\$ 1200.50'), findsOneWidget);
+      // 5. A mensagem de "lista vazia" sumiu
+      expect(
+          find.text('Nenhum saldo ou gasto registrado ainda.'), findsNothing);
     });
   });
 }

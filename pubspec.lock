@@ -104,18 +104,11 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-<<<<<<< HEAD
   fuchsia_remote_debug_protocol:
     dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"
-  integration_test:
-    dependency: "direct dev"
-    description: flutter
-    source: sdk
-    version: "0.0.0"
-=======
   http:
     dependency: "direct main"
     description:
@@ -132,7 +125,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
->>>>>>> 26963ab136b7561a9b9cce16be5bd4bbc049c2ab
+  integration_test:
+    dependency: "direct dev"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -274,8 +271,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.6"
-<<<<<<< HEAD
-=======
   typed_data:
     dependency: transitive
     description:
@@ -284,7 +279,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
->>>>>>> 26963ab136b7561a9b9cce16be5bd4bbc049c2ab
   vector_math:
     dependency: transitive
     description:
@@ -300,17 +294,6 @@ packages:
       sha256: "45caa6c5917fa127b5dbcfbd1fa60b14e583afdc08bfc96dda38886ca252eb60"
       url: "https://pub.dev"
     source: hosted
-<<<<<<< HEAD
-    version: "15.0.0"
-  webdriver:
-    dependency: transitive
-    description:
-      name: webdriver
-      sha256: "2f3a14ca026957870cfd9c635b83507e0e51d8091568e90129fbf805aba7cade"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.0"
-=======
     version: "15.0.2"
   web:
     dependency: transitive
@@ -320,7 +303,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
->>>>>>> 26963ab136b7561a9b9cce16be5bd4bbc049c2ab
+  webdriver:
+    dependency: transitive
+    description:
+      name: webdriver
+      sha256: "2f3a14ca026957870cfd9c635b83507e0e51d8091568e90129fbf805aba7cade"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
 sdks:
   dart: ">=3.8.0-0 <4.0.0"
   flutter: ">=3.27.4"
