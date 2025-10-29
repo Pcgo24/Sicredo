@@ -108,16 +108,6 @@ lib/
 
 ---
 
-
-
-## Próximos Passos
-
-- Persistência local dos dados (Hive, SharedPreferences, etc).
-- Filtros e estatísticas avançadas para o extrato.
-- Customização de categorias de ganhos/gastos.
-- Melhorias de acessibilidade e internacionalização.
-
----
 ## Testes Automatizados
 O projeto inclui uma suíte de testes automatizados seguindo os padrões do Flutter para garantir a qualidade, estabilidade e o correto funcionamento das funcionalidades e regras de negócio.
 
@@ -148,6 +138,15 @@ A cobertura de testes foi dividida nas três principais categorias:
     - **Fluxo de Autenticação (TI-01)**: Simula o usuário desde a `WelcomeScreen`, tocando em "Começar", preenchendo o login na `AuthScreen` e verificando se ele chega com sucesso à `HomeScreen`.
 
     - **Fluxo de "Adicionar Saldo" (TI-02)**: Simula o usuário já logado na `HomeScreen`, toca em "Adicionar Saldo", preenche o formulário no `AlertDialog` e verifica se o "Saldo Total" e a lista de extrato na `HomeScreen` são atualizados corretamente.
+
+## Próximos Passos
+
+- Persistência local dos dados (Hive, SharedPreferences, etc).
+- Filtros e estatísticas avançadas para o extrato.
+- Customização de categorias de ganhos/gastos.
+- Melhorias de acessibilidade e internacionalização.
+
+---
 
 ## Equipe
 
