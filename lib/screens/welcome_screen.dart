@@ -16,7 +16,7 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               // 1. Logo do App
               Image.asset(
-                '../../assets/images/sicredo.png',
+                'assets/images/sicredo.png',
                 width: 250, // Ajuste o tamanho conforme necessário
               ),
               const SizedBox(height: 40),

@@ -35,6 +35,13 @@ class HomeScreen extends StatelessWidget {
               Navigator.pushNamed(context, AppRoutes.slaoq);
             },
           ),
+
+          IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.welcome);
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -112,6 +119,28 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
 
             // --- LEGENDA / LISTA DE ITENS ---
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: List.generate(dataMap.length, (index) {
+                  final entry = dataMap.entries.elementAt(index);
+                  return ListTile(
+                    leading: CircleAvatar(
+                      radius: 10,
+                      backgroundColor: colorList[index],
+                    ),
+                    title: Text(entry.key),
+                    trailing: Text(
+                      '${entry.value.toStringAsFixed(0)}%',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }),
+              ),
+            ),
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(

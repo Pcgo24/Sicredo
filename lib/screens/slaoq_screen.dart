@@ -43,12 +43,12 @@ class SlaoqScreen extends StatelessWidget {
             const CircleAvatar(
               radius: 40,
               backgroundImage: AssetImage(
-                '../../assets/images/profile_image.jpg', // Imagem de placeholder
+                'assets/images/profile_image.jpg', // Imagem de placeholder
               ), // Imagem de placeholder
             ),
             const SizedBox(height: 12),
             const Text(
-              'Ali Husni',
+              'Jarvis',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
