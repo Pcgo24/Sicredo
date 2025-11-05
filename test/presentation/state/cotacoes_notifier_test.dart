@@ -34,7 +34,6 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(cotacoesNotifierProvider.notifier);
-      // Chamamos explicitamente para garantir conclusão dentro do teste
       await notifier.load();
 
       final state = container.read(cotacoesNotifierProvider);
