@@ -9,9 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_riverpod: ^2.5.1
   fl_chart: ^1.0.0
   cupertino_icons: ^1.0.8
-  http: ^1.1.0
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -19,7 +20,6 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
-  http: ^1.2.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
