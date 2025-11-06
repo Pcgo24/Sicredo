@@ -1,62 +1,107 @@
-/// Transaction model for database persistence
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
+/// Transaction model for Firestore persistence
 /// Represents a financial transaction (income or expense)
 class TransactionModel {
-  final int? id;
+  final String? id; // Firestore document ID
+  final String userId; // User who owns this transaction
   final String nome;
-  final double valor;
-  final DateTime data;
-  final bool isGanho;
+  final int amountCents; // Amount in cents to avoid floating point issues
+  final Timestamp date; // Timestamp for queries and sorting
+  final String dateStr; // Formatted date string (dd/MM/yyyy) for display
+  final String type; // "entrada" or "saida"
 
   TransactionModel({
     this.id,
+    required this.userId,
     required this.nome,
-    required this.valor,
-    required this.data,
-    required this.isGanho,
+    required this.amountCents,
+    required this.date,
+    required this.dateStr,
+    required this.type,
   });
 
-  /// Converts the model to a Map for database insertion
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'nome': nome,
-      'valor': valor,
-      'data': data.millisecondsSinceEpoch,
-      'isGanho': isGanho ? 1 : 0,
-    };
+  /// Helper to get amount in reais (double)
+  double get valor => amountCents / 100.0;
+
+  /// Helper to check if it's income
+  bool get isGanho => type == 'entrada';
+
+  /// Creates a TransactionModel from amount in reais
+  factory TransactionModel.fromReais({
+    String? id,
+    required String userId,
+    required String nome,
+    required double valor,
+    required DateTime dataTime,
+    required bool isGanho,
+  }) {
+    final dateFormatter = DateFormat('dd/MM/yyyy');
+    return TransactionModel(
+      id: id,
+      userId: userId,
+      nome: nome,
+      amountCents: (valor * 100).round(),
+      date: Timestamp.fromDate(dataTime),
+      dateStr: dateFormatter.format(dataTime),
+      type: isGanho ? 'entrada' : 'saida',
+    );
   }
 
-  /// Creates a model from a database Map
-  factory TransactionModel.fromMap(Map<String, dynamic> map) {
+  /// Creates a TransactionModel from Firestore document
+  factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     return TransactionModel(
-      id: map['id'] as int?,
-      nome: map['nome'] as String,
-      valor: map['valor'] as double,
-      data: DateTime.fromMillisecondsSinceEpoch(map['data'] as int),
-      isGanho: map['isGanho'] == 1,
+      id: doc.id,
+      userId: data['userId'] as String,
+      nome: data['nome'] as String? ?? '',
+      amountCents: data['amountCents'] as int,
+      date: data['date'] as Timestamp,
+      dateStr: data['dateStr'] as String,
+      type: data['type'] as String,
     );
+  }
+
+  /// Converts TransactionModel to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'nome': nome,
+      'amountCents': amountCents,
+      'date': date,
+      'dateStr': dateStr,
+      'type': type,
+    };
   }
 
   /// Creates a copy of the model with updated fields
   TransactionModel copyWith({
-    int? id,
+    String? id,
+    String? userId,
     String? nome,
-    double? valor,
-    DateTime? data,
-    bool? isGanho,
+    int? amountCents,
+    Timestamp? date,
+    String? dateStr,
+    String? type,
   }) {
     return TransactionModel(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       nome: nome ?? this.nome,
-      valor: valor ?? this.valor,
-      data: data ?? this.data,
-      isGanho: isGanho ?? this.isGanho,
+      amountCents: amountCents ?? this.amountCents,
+      date: date ?? this.date,
+      dateStr: dateStr ?? this.dateStr,
+      type: type ?? this.type,
     );
   }
 
+  /// Helper to get DateTime from Timestamp
+  DateTime get data => date.toDate();
+
   @override
   String toString() {
-    return 'TransactionModel{id: $id, nome: $nome, valor: $valor, data: $data, isGanho: $isGanho}';
+    return 'TransactionModel{id: $id, userId: $userId, nome: $nome, valor: $valor, date: $dateStr, type: $type}';
   }
 
   @override
@@ -65,18 +110,22 @@ class TransactionModel {
 
     return other is TransactionModel &&
         other.id == id &&
+        other.userId == userId &&
         other.nome == nome &&
-        other.valor == valor &&
-        other.data == data &&
-        other.isGanho == isGanho;
+        other.amountCents == amountCents &&
+        other.date == date &&
+        other.dateStr == dateStr &&
+        other.type == type;
   }
 
   @override
   int get hashCode {
     return id.hashCode ^
+        userId.hashCode ^
         nome.hashCode ^
-        valor.hashCode ^
-        data.hashCode ^
-        isGanho.hashCode;
+        amountCents.hashCode ^
+        date.hashCode ^
+        dateStr.hashCode ^
+        type.hashCode;
   }
 }
