@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../data/models/transaction_model.dart';
-import '../data/repositories/transaction_repository.dart';
+import '../data/repositories/firebase_transaction_repository.dart';
+import '../services/auth_service.dart';
 
 class EntradaExtrato {
-  final int? id;
+  final String? id;
   final String nome;
   final double valor;
   final DateTime data;
@@ -27,17 +29,6 @@ class EntradaExtrato {
       isGanho: model.isGanho,
     );
   }
-
-  // Convert to TransactionModel
-  TransactionModel toModel() {
-    return TransactionModel(
-      id: id,
-      nome: nome,
-      valor: valor,
-      data: data,
-      isGanho: isGanho,
-    );
-  }
 }
 
 class HomeScreen extends StatefulWidget {
@@ -50,8 +41,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double saldoTotal = 0.0;
   List<EntradaExtrato> extrato = [];
-  final TransactionRepository _repository = TransactionRepository();
+  final FirebaseTransactionRepository _repository = FirebaseTransactionRepository();
+  final AuthService _authService = AuthService();
   bool _isLoading = true;
+  String? _currentUserId;
 
   late AnimationController _saldoController;
   late Animation<double> _saldoAnim;
@@ -65,14 +58,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     _saldoAnim = CurvedAnimation(parent: _saldoController, curve: Curves.elasticOut);
     _saldoController.forward();
-    _loadData();
+    _checkAuthAndLoadData();
   }
 
-  /// Loads data from the database
+  /// Check authentication and load data
+  Future<void> _checkAuthAndLoadData() async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      // User not authenticated, redirect to auth screen
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/auth');
+      }
+      return;
+    }
+
+    _currentUserId = user.uid;
+    await _loadData();
+  }
+
+  /// Loads data from Firestore
   Future<void> _loadData() async {
+    if (_currentUserId == null) return;
+
     try {
-      final balance = await _repository.getSaldoTotal();
-      final transactions = await _repository.getAllTransactions();
+      final balance = await _repository.calculateUserBalance(_currentUserId!);
+      final transactions = await _repository.getUserTransactions(_currentUserId!);
       
       setState(() {
         saldoTotal = balance;
@@ -164,23 +174,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   // Close dialog first
                   Navigator.of(context).pop();
                   
-                  // Save to database
+                  // Save to Firestore
                   try {
+                    if (_currentUserId == null) {
+                      throw Exception('User not authenticated');
+                    }
+
                     final now = DateTime.now();
-                    final newTransaction = TransactionModel(
+                    final newTransaction = TransactionModel.fromReais(
+                      userId: _currentUserId!,
                       nome: nomeInput,
                       valor: valor,
-                      data: now,
+                      dataTime: now,
                       isGanho: isGanho,
                     );
                     
-                    final id = await _repository.insertTransaction(newTransaction);
+                    final id = await _repository.addTransaction(newTransaction);
                     
-                    // Note: Using current saldoTotal for calculation is safe in this UI context
-                    // as transactions are added one at a time. For concurrent scenarios,
-                    // consider using repository.calculateSaldoTotal() instead.
+                    // Update balance
                     final newSaldo = isGanho ? saldoTotal + valor : saldoTotal - valor;
-                    await _repository.updateSaldoTotal(newSaldo);
                     
                     setState(() {
                       saldoTotal = newSaldo;
@@ -196,6 +208,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       );
                       _saldoController.forward(from: 0); // animação ao atualizar saldo
                     });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isGanho ? 'Saldo adicionado!' : 'Gasto registrado!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -238,6 +257,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         .fold(0.0, (soma, e) => soma + e.valor);
   }
 
+  Future<void> _signOut() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/auth');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao sair: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Color(0xFF1c365d);
@@ -258,6 +293,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.exit_to_app, color: primaryColor),
+            onPressed: _signOut,
+            tooltip: 'Sair',
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(
@@ -299,110 +341,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             key: ValueKey(saldoTotal),
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 38,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
+                              fontSize: 48,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
-                        SizedBox(height: 12),
+                        SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _ResumoCard(
-                              label: "Ganhos do mês",
-                              valor: _ganhosDoMes(),
-                              color: accentColor,
-                              icon: Icons.arrow_upward,
-                            ),
-                            _ResumoCard(
-                              label: "Gastos do mês",
-                              valor: _gastosDoMes(),
-                              color: Colors.red,
-                              icon: Icons.arrow_downward,
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 18),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(14),
-                                splashColor: accentColor.withOpacity(0.3),
-                                onTap: () => _showAddDialog(isGanho: true),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: accentColor,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  padding: EdgeInsets.symmetric(vertical: 14),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add, color: Colors.white),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Adicionar Saldo',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white),
-                                      ),
-                                    ],
+                            Column(
+                              children: [
+                                Text(
+                                  'Ganhos do mês',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 14,
                                   ),
                                 ),
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(14),
-                                splashColor: Colors.red.withOpacity(0.3),
-                                onTap: () => _showAddDialog(isGanho: false),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  padding: EdgeInsets.symmetric(vertical: 14),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.remove, color: Colors.white),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Registrar Gasto',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white),
-                                      ),
-                                    ],
+                                SizedBox(height: 4),
+                                Text(
+                                  'R\$ ${_ganhosDoMes().toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Gastos do mês',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'R\$ ${_gastosDoMes().toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                        SizedBox(height: 18),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.pushNamed(context, '/cotacao');
-                            },
-                            icon: Icon(Icons.attach_money),
-                            label: Text('Ver cotações de moedas'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF1c365d),
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                          ),
                         ),
                       ],
                     ),
@@ -410,119 +398,242 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
               SizedBox(height: 24),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Extrato do mês',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: primaryColor,
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _showAddDialog(isGanho: true),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentColor.withOpacity(0.3),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.add_circle_outline, color: Colors.white, size: 32),
+                            SizedBox(height: 8),
+                            Text(
+                              'Adicionar Saldo',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _showAddDialog(isGanho: false),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.remove_circle_outline, color: Colors.white, size: 32),
+                            SizedBox(height: 8),
+                            Text(
+                              'Registrar Gasto',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 12),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  InkWell(
+                    onTap: () => Navigator.pushNamed(context, '/cotacao'),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blueAccent.withOpacity(0.3),
+                            spreadRadius: 1,
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.currency_exchange, color: Colors.white, size: 24),
+                          SizedBox(width: 8),
+                          Text(
+                            'Ver Cotações',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24),
               Expanded(
                 child: extrato.isEmpty
                     ? Center(
-                        child: Text(
-                          'Nenhum saldo ou gasto registrado ainda.',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontSize: 16,
-                          ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet_outlined,
+                              size: 80,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Nenhuma transação ainda',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                       )
-                    : ListView.separated(
+                    : ListView.builder(
                         itemCount: extrato.length,
-                        separatorBuilder: (_, __) =>
-                            Divider(height: 1, color: Colors.grey[300]),
-                        itemBuilder: (context, index) {
-                          final entry = extrato[index];
+                        itemBuilder: (context, idx) {
+                          final e = extrato[idx];
                           return Dismissible(
-                            key: ValueKey(entry.nome + entry.data.toString()),
-                            background: Container(
-                              color: Colors.red.withOpacity(0.8),
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.only(right: 20),
-                              child: Icon(Icons.delete, color: Colors.white, size: 28),
-                            ),
+                            key: Key(e.id ?? idx.toString()),
                             direction: DismissDirection.endToStart,
-                            onDismissed: (_) async {
-                              final entryToDelete = entry;
-                              
+                            onDismissed: (direction) async {
                               try {
-                                // Delete from database
-                                if (entryToDelete.id != null) {
-                                  await _repository.deleteTransaction(entryToDelete.id!);
+                                if (e.id != null) {
+                                  await _repository.deleteTransaction(e.id!);
                                 }
-                                
-                                final newSaldo = saldoTotal + (entryToDelete.isGanho ? -entryToDelete.valor : entryToDelete.valor);
-                                await _repository.updateSaldoTotal(newSaldo);
-                                
+
                                 setState(() {
-                                  saldoTotal = newSaldo;
-                                  extrato.removeAt(index);
-                                  _saldoController.forward(from: 0);
+                                  saldoTotal = e.isGanho ? saldoTotal - e.valor : saldoTotal + e.valor;
+                                  extrato.removeAt(idx);
                                 });
-                              } catch (e) {
-                                // If error, reload from database
-                                await _loadData();
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Erro ao deletar: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            child: InkWell(
-                              onTap: () {
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                      'Item "${entry.nome}" (${entry.isGanho ? "ganho" : "gasto"})',
+                                    content: Text('${e.nome} removido'),
+                                    action: SnackBarAction(
+                                      label: 'Desfazer',
+                                      onPressed: () async {
+                                        // Recreate the transaction
+                                        try {
+                                          if (_currentUserId == null) return;
+                                          
+                                          final newTransaction = TransactionModel.fromReais(
+                                            userId: _currentUserId!,
+                                            nome: e.nome,
+                                            valor: e.valor,
+                                            dataTime: e.data,
+                                            isGanho: e.isGanho,
+                                          );
+                                          await _repository.addTransaction(newTransaction);
+                                          await _loadData();
+                                        } catch (err) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Erro ao desfazer: $err'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      },
                                     ),
-                                    duration: Duration(milliseconds: 900),
-                                    backgroundColor: entry.isGanho
-                                        ? accentColor
-                                        : Colors.red,
                                   ),
                                 );
-                              },
+                              } catch (err) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Erro ao remover: $err'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.only(right: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(Icons.delete, color: Colors.white, size: 32),
+                            ),
+                            child: Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              margin: EdgeInsets.only(bottom: 12),
                               child: ListTile(
+                                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 leading: CircleAvatar(
-                                  backgroundColor:
-                                      entry.isGanho ? accentColor : Colors.red,
+                                  backgroundColor: e.isGanho ? accentColor : Colors.red,
                                   child: Icon(
-                                    entry.isGanho
-                                        ? Icons.arrow_upward
-                                        : Icons.arrow_downward,
+                                    e.isGanho ? Icons.arrow_upward : Icons.arrow_downward,
                                     color: Colors.white,
                                   ),
                                 ),
                                 title: Text(
-                                  entry.nome,
+                                  e.nome,
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: primaryColor,
+                                    fontSize: 16,
                                   ),
                                 ),
                                 subtitle: Text(
-                                  _formatDate(entry.data),
+                                  _formatDate(e.data),
                                   style: TextStyle(
-                                    color: Colors.grey[700],
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
                                   ),
                                 ),
                                 trailing: Text(
-                                  (entry.isGanho ? '+ ' : '- ') +
-                                      'R\$ ${entry.valor.toStringAsFixed(2)}',
+                                  'R\$ ${e.valor.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: entry.isGanho ? accentColor : Colors.red,
-                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    color: e.isGanho ? accentColor : Colors.red,
                                   ),
                                 ),
                               ),
@@ -533,59 +644,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ResumoCard extends StatelessWidget {
-  final String label;
-  final double valor;
-  final Color color;
-  final IconData icon;
-
-  _ResumoCard({
-    required this.label,
-    required this.valor,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: color.withOpacity(0.15),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  'R\$ ${valor.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
