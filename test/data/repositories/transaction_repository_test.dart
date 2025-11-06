@@ -1,29 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sicredo/data/models/transaction_model.dart';
 import 'package:sicredo/data/repositories/transaction_repository.dart';
-import 'package:sicredo/data/database/database_helper.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 
 void main() {
-  // Initialize FFI for testing
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  setUp(() async {
-    // Reset database before each test
-    await DatabaseHelper.instance.reset();
-  });
-
-  tearDown(() async {
-    // Clean up after each test
-    await DatabaseHelper.instance.close();
-  });
-
   group('TransactionRepository', () {
-    test('insertTransaction should add transaction to database', () async {
-      final repository = TransactionRepository();
+    late FakeFirebaseFirestore fakeFirestore;
+    late TransactionRepository repository;
+
+    setUp(() {
+      fakeFirestore = FakeFirebaseFirestore();
+      repository = TransactionRepository(
+        firestore: fakeFirestore,
+        userId: 'test_user',
+      );
+    });
+
+    test('insertTransaction should add transaction to Firestore', () async {
       final transaction = TransactionModel(
         nome: 'Salário',
         valor: 5000.0,
@@ -33,7 +26,7 @@ void main() {
 
       final id = await repository.insertTransaction(transaction);
 
-      expect(id, isPositive);
+      expect(id, isNotEmpty);
 
       final transactions = await repository.getAllTransactions();
       expect(transactions.length, 1);
@@ -43,8 +36,6 @@ void main() {
     });
 
     test('getAllTransactions should return all transactions ordered by date', () async {
-      final repository = TransactionRepository();
-      
       await repository.insertTransaction(TransactionModel(
         nome: 'First',
         valor: 100.0,
@@ -76,12 +67,10 @@ void main() {
     });
 
     test('getTransactionsByMonth should filter transactions correctly', () async {
-      final repository = TransactionRepository();
-      
       await repository.insertTransaction(TransactionModel(
         nome: 'January',
         valor: 100.0,
-        data: DateTime(2024, 1, 15),
+        data: DateTime(2024, 1, 10),
         isGanho: true,
       ));
 
@@ -108,8 +97,6 @@ void main() {
     });
 
     test('getTransactionsByMonth should handle December correctly', () async {
-      final repository = TransactionRepository();
-      
       await repository.insertTransaction(TransactionModel(
         nome: 'December Early',
         valor: 100.0,
@@ -140,7 +127,6 @@ void main() {
     });
 
     test('updateTransaction should modify existing transaction', () async {
-      final repository = TransactionRepository();
       final transaction = TransactionModel(
         nome: 'Original',
         valor: 100.0,
@@ -155,8 +141,7 @@ void main() {
         valor: 200.0,
       );
 
-      final updateCount = await repository.updateTransaction(updatedTransaction);
-      expect(updateCount, 1);
+      await repository.updateTransaction(updatedTransaction);
 
       final transactions = await repository.getAllTransactions();
       expect(transactions.length, 1);
@@ -164,8 +149,7 @@ void main() {
       expect(transactions.first.valor, 200.0);
     });
 
-    test('deleteTransaction should remove transaction from database', () async {
-      final repository = TransactionRepository();
+    test('deleteTransaction should remove transaction from Firestore', () async {
       final transaction = TransactionModel(
         nome: 'To Delete',
         valor: 100.0,
@@ -174,28 +158,23 @@ void main() {
       );
 
       final id = await repository.insertTransaction(transaction);
-      expect(id, isPositive);
+      expect(id, isNotEmpty);
 
       var transactions = await repository.getAllTransactions();
       expect(transactions.length, 1);
 
-      final deleteCount = await repository.deleteTransaction(id);
-      expect(deleteCount, 1);
+      await repository.deleteTransaction(id);
 
       transactions = await repository.getAllTransactions();
       expect(transactions.length, 0);
     });
 
     test('getSaldoTotal should return current balance', () async {
-      final repository = TransactionRepository();
-      
       final saldo = await repository.getSaldoTotal();
       expect(saldo, 0.0);
     });
 
     test('updateSaldoTotal should update the balance', () async {
-      final repository = TransactionRepository();
-      
       await repository.updateSaldoTotal(1500.50);
       
       final saldo = await repository.getSaldoTotal();
@@ -203,8 +182,6 @@ void main() {
     });
 
     test('calculateSaldoTotal should calculate balance from transactions', () async {
-      final repository = TransactionRepository();
-      
       await repository.insertTransaction(TransactionModel(
         nome: 'Income',
         valor: 1000.0,
@@ -231,8 +208,6 @@ void main() {
     });
 
     test('deleteAllTransactions should remove all transactions and reset balance', () async {
-      final repository = TransactionRepository();
-      
       await repository.insertTransaction(TransactionModel(
         nome: 'Transaction 1',
         valor: 100.0,

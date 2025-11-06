@@ -48,3 +48,11 @@ app.*.map.json
 *.db
 *.db-shm
 *.db-wal
+
+# Firebase configuration files (contain sensitive data)
+# Note: Keep lib/firebase_options.dart as a template with placeholder values
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+web/firebase-config.js
+.firebaserc

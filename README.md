@@ -108,11 +108,31 @@ lib/
 
 ## Persistência de Dados
 
-- **SQLite Database:** Implementado para persistência local de transações e saldo.
+- **Firebase Firestore:** Implementado para persistência em nuvem com sincronização em tempo real.
 - **Repository Pattern:** Camada de abstração para operações de banco de dados.
-- **Models:** TransactionModel com serialização para/do banco de dados.
-- Os dados são persistidos automaticamente e carregados ao iniciar o app.
-- Para mais detalhes, veja [DATABASE.md](DATABASE.md).
+- **Models:** TransactionModel com serialização para/do Firestore.
+- Os dados são sincronizados automaticamente entre dispositivos.
+- Para mais detalhes, veja [DATABASE.md](DATABASE.md) e [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
+
+---
+
+## Configuração do Firebase
+
+O app requer configuração do Firebase para funcionar. Siga estas etapas:
+
+1. Crie um projeto no [Firebase Console](https://console.firebase.google.com/)
+2. Ative o Firestore Database
+3. Instale o FlutterFire CLI:
+   ```sh
+   dart pub global activate flutterfire_cli
+   ```
+4. Configure o Firebase no projeto:
+   ```sh
+   flutterfire configure
+   ```
+5. As configurações serão salvas em `lib/firebase_options.dart`
+
+Para instruções detalhadas, consulte [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
 
 ---
 
@@ -133,7 +153,17 @@ lib/
     ```sh
     flutter pub get
     ```
-3. Rode o app:
+3. Configure o Firebase (obrigatório):
+    ```sh
+    # Instale o FlutterFire CLI
+    dart pub global activate flutterfire_cli
+    
+    # Configure o Firebase
+    flutterfire configure
+    ```
+    Para instruções detalhadas, veja [FIREBASE_SETUP.md](FIREBASE_SETUP.md)
+    
+4. Rode o app:
     ```sh
     flutter run
     ```
@@ -174,10 +204,12 @@ A cobertura de testes foi dividida nas três principais categorias:
 ## Próximos Passos
 
 - ✅ ~~Persistência local dos dados~~ (Implementado com SQLite)
+- ✅ ~~Migração para Firebase Firestore~~ (Implementado)
+- 🔄 Autenticação de usuários com Firebase Auth
+- 🔄 Sincronização de dados entre dispositivos
 - Filtros e estatísticas avançadas para o extrato.
 - Customização de categorias de ganhos/gastos.
 - Melhorias de acessibilidade e internacionalização.
-- Backup e sincronização de dados na nuvem.
 
 ---
 

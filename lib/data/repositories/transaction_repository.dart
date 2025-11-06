@@ -1,30 +1,45 @@
-import '../database/database_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/transaction_model.dart';
 
-/// Repository for managing transaction data persistence
+/// Repository for managing transaction data persistence with Firestore
 /// Handles all CRUD operations for transactions and balance
 class TransactionRepository {
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final FirebaseFirestore _firestore;
+  final String _userId;
 
-  /// Inserts a new transaction into the database
-  /// Returns the id of the inserted transaction
-  Future<int> insertTransaction(TransactionModel transaction) async {
-    final db = await _dbHelper.database;
-    return await db.insert('transactions', transaction.toMap());
+  // Collection references
+  late final CollectionReference _transactionsCollection;
+  late final DocumentReference _userSettingsDoc;
+
+  TransactionRepository({
+    FirebaseFirestore? firestore,
+    String userId = 'default_user', // In production, use actual user ID from auth
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _userId = userId {
+    _transactionsCollection = _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('transactions');
+    _userSettingsDoc = _firestore.collection('users').doc(_userId);
   }
 
-  /// Gets all transactions from the database
+  /// Inserts a new transaction into Firestore
+  /// Returns the id of the inserted transaction
+  Future<String> insertTransaction(TransactionModel transaction) async {
+    final docRef = await _transactionsCollection.add(transaction.toMap());
+    return docRef.id;
+  }
+
+  /// Gets all transactions from Firestore
   /// Returns a list of transactions ordered by date (newest first)
   Future<List<TransactionModel>> getAllTransactions() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'transactions',
-      orderBy: 'data DESC',
-    );
+    final querySnapshot = await _transactionsCollection
+        .orderBy('data', descending: true)
+        .get();
 
-    return List.generate(maps.length, (i) {
-      return TransactionModel.fromMap(maps[i]);
-    });
+    return querySnapshot.docs
+        .map((doc) => TransactionModel.fromFirestore(doc))
+        .toList();
   }
 
   /// Gets transactions filtered by month and year
@@ -32,75 +47,60 @@ class TransactionRepository {
     int month,
     int year,
   ) async {
-    final db = await _dbHelper.database;
-    
-    // Calculate start and end timestamps for the month
     final startDate = DateTime(year, month, 1);
-    // Calculate end of month by going to first day of next month and subtracting 1 microsecond
-    final endDate = DateTime(year, month + 1, 1).subtract(Duration(microseconds: 1));
-    
-    final List<Map<String, dynamic>> maps = await db.query(
-      'transactions',
-      where: 'data >= ? AND data <= ?',
-      whereArgs: [
-        startDate.millisecondsSinceEpoch,
-        endDate.millisecondsSinceEpoch,
-      ],
-      orderBy: 'data DESC',
-    );
+    final endDate = DateTime(year, month + 1, 1)
+        .subtract(const Duration(microseconds: 1));
 
-    return List.generate(maps.length, (i) {
-      return TransactionModel.fromMap(maps[i]);
-    });
+    final querySnapshot = await _transactionsCollection
+        .where('data',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('data', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+        .orderBy('data', descending: true)
+        .get();
+
+    return querySnapshot.docs
+        .map((doc) => TransactionModel.fromFirestore(doc))
+        .toList();
   }
 
   /// Updates an existing transaction
-  /// Returns the number of rows affected
-  Future<int> updateTransaction(TransactionModel transaction) async {
-    final db = await _dbHelper.database;
-    return await db.update(
-      'transactions',
-      transaction.toMap(),
-      where: 'id = ?',
-      whereArgs: [transaction.id],
-    );
+  /// Returns void (Firestore doesn't return affected rows count)
+  Future<void> updateTransaction(TransactionModel transaction) async {
+    if (transaction.id == null) {
+      throw ArgumentError('Transaction ID cannot be null for update');
+    }
+    await _transactionsCollection
+        .doc(transaction.id)
+        .update(transaction.toMap());
   }
 
   /// Deletes a transaction by id
-  /// Returns the number of rows affected
-  Future<int> deleteTransaction(int id) async {
-    final db = await _dbHelper.database;
-    return await db.delete(
-      'transactions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+  /// Returns void (Firestore doesn't return affected rows count)
+  Future<void> deleteTransaction(String id) async {
+    await _transactionsCollection.doc(id).delete();
   }
 
   /// Gets the current total balance from user settings
   Future<double> getSaldoTotal() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> result = await db.query(
-      'user_settings',
-      where: 'id = ?',
-      whereArgs: [1],
-    );
-
-    if (result.isNotEmpty) {
-      return result.first['saldo_total'] as double;
+    final doc = await _userSettingsDoc.get();
+    if (!doc.exists) {
+      // Initialize with default value if doesn't exist
+      await _userSettingsDoc.set({
+        'saldo_total': 0.0,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+      return 0.0;
     }
-    return 0.0;
+    final data = doc.data() as Map<String, dynamic>?;
+    return (data?['saldo_total'] as num?)?.toDouble() ?? 0.0;
   }
 
   /// Updates the total balance in user settings
-  Future<int> updateSaldoTotal(double saldoTotal) async {
-    final db = await _dbHelper.database;
-    return await db.update(
-      'user_settings',
-      {'saldo_total': saldoTotal},
-      where: 'id = ?',
-      whereArgs: [1],
-    );
+  Future<void> updateSaldoTotal(double saldoTotal) async {
+    await _userSettingsDoc.set({
+      'saldo_total': saldoTotal,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   /// Calculates the total balance based on all transactions
@@ -108,7 +108,7 @@ class TransactionRepository {
   Future<double> calculateSaldoTotal() async {
     final transactions = await getAllTransactions();
     double total = 0.0;
-    
+
     for (var transaction in transactions) {
       if (transaction.isGanho) {
         total += transaction.valor;
@@ -116,14 +116,20 @@ class TransactionRepository {
         total -= transaction.valor;
       }
     }
-    
+
     return total;
   }
 
   /// Deletes all transactions (useful for testing or reset)
   Future<void> deleteAllTransactions() async {
-    final db = await _dbHelper.database;
-    await db.delete('transactions');
+    final querySnapshot = await _transactionsCollection.get();
+    final batch = _firestore.batch();
+
+    for (var doc in querySnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
     await updateSaldoTotal(0.0);
   }
 }

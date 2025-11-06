@@ -1,7 +1,9 @@
-/// Transaction model for database persistence
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Transaction model for Firestore persistence
 /// Represents a financial transaction (income or expense)
 class TransactionModel {
-  final int? id;
+  final String? id;
   final String nome;
   final double valor;
   final DateTime data;
@@ -15,31 +17,48 @@ class TransactionModel {
     required this.isGanho,
   });
 
-  /// Converts the model to a Map for database insertion
+  /// Converts the model to a Map for Firestore
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'nome': nome,
       'valor': valor,
-      'data': data.millisecondsSinceEpoch,
-      'isGanho': isGanho ? 1 : 0,
+      'data': Timestamp.fromDate(data),
+      'isGanho': isGanho,
     };
   }
 
-  /// Creates a model from a database Map
-  factory TransactionModel.fromMap(Map<String, dynamic> map) {
+  /// Creates a model from a Firestore DocumentSnapshot
+  factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     return TransactionModel(
-      id: map['id'] as int?,
+      id: doc.id,
+      nome: data['nome'] as String,
+      valor: (data['valor'] as num).toDouble(),
+      data: (data['data'] as Timestamp).toDate(),
+      isGanho: data['isGanho'] as bool,
+    );
+  }
+
+  /// Creates a model from a Map (for compatibility)
+  factory TransactionModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    return TransactionModel(
+      id: id ?? map['id'] as String?,
       nome: map['nome'] as String,
-      valor: map['valor'] as double,
-      data: DateTime.fromMillisecondsSinceEpoch(map['data'] as int),
-      isGanho: map['isGanho'] == 1,
+      valor: (map['valor'] as num).toDouble(),
+      data: map['data'] is Timestamp 
+          ? (map['data'] as Timestamp).toDate()
+          : map['data'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['data'] as int)
+              : map['data'] as DateTime,
+      isGanho: map['isGanho'] is int 
+          ? map['isGanho'] == 1 
+          : map['isGanho'] as bool,
     );
   }
 
   /// Creates a copy of the model with updated fields
   TransactionModel copyWith({
-    int? id,
+    String? id,
     String? nome,
     double? valor,
     DateTime? data,

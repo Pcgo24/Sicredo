@@ -3,7 +3,7 @@ import '../data/models/transaction_model.dart';
 import '../data/repositories/transaction_repository.dart';
 
 class EntradaExtrato {
-  final int? id;
+  final String? id;
   final String nome;
   final double valor;
   final DateTime data;

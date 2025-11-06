@@ -3,26 +3,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:sicredo/main.dart' as app;
 import 'package:sicredo/widgets/form_input.dart';
-import 'package:sicredo/data/database/database_helper.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:sicredo/data/repositories/transaction_repository.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize FFI for testing on non-mobile platforms
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
+  late FakeFirebaseFirestore fakeFirestore;
 
   setUp(() async {
-    // Reset database before each test
-    await DatabaseHelper.instance.reset();
-  });
-
-  tearDown(() async {
-    // Clean up after each test
-    await DatabaseHelper.instance.close();
+    // Initialize fake Firestore
+    fakeFirestore = FakeFirebaseFirestore();
+    
+    // Reset Firestore data before each test
+    final repository = TransactionRepository(
+      firestore: fakeFirestore,
+      userId: 'test_user',
+    );
+    await repository.deleteAllTransactions();
   });
 
   group('Fluxos de Integração do App', () {
