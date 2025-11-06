@@ -29,11 +29,33 @@ Gestão Financeira Pessoal Mobile
 lib/
   core/
     cotacao_service.dart       # Serviço de integração com API de cotações
+  data/
+    database/
+      database_helper.dart     # Helper para gerenciar SQLite
+    models/
+      transaction_model.dart   # Modelo de transação financeira
+      cotacao_model.dart       # Modelo de cotação
+    repositories/
+      transaction_repository.dart  # Repositório de transações
+      cotacao_repository_impl.dart # Implementação do repositório de cotações
+    datasources/
+      cotacao_remote_data_source.dart  # Fonte de dados remota
   screens/
     welcome_screen.dart        # Tela de boas-vindas
     auth_screen.dart           # Tela de autenticação
-    home_screen.dart           # Tela principal
-    cotacao_screen.dart        # Tela de cotações de moedas
+    home_screen.dart           # Tela principal com persistência
+  presentation/
+    screens/
+      cotacoes_screen.dart     # Tela de cotações com Riverpod
+    state/
+      cotacoes_notifier.dart   # Gerenciamento de estado com Riverpod
+  domain/
+    entities/
+      cotacao.dart             # Entidade de cotação
+    repositories/
+      cotacao_repository.dart  # Interface do repositório
+    usecases/
+      get_cotacoes.dart        # Caso de uso de cotações
   widgets/
     form_input.dart            # Átomo: campo de formulário reutilizável
     primary_button.dart        # Átomo: botão primário reutilizável
@@ -81,6 +103,16 @@ lib/
 - Tela de autenticação com 3 campos (`Nome`, `E-mail`, `Senha`).
 - Validação de e-mail, senha mínima, nome obrigatório.
 - Alertas e feedback visual em caso de erro.
+
+---
+
+## Persistência de Dados
+
+- **SQLite Database:** Implementado para persistência local de transações e saldo.
+- **Repository Pattern:** Camada de abstração para operações de banco de dados.
+- **Models:** TransactionModel com serialização para/do banco de dados.
+- Os dados são persistidos automaticamente e carregados ao iniciar o app.
+- Para mais detalhes, veja [DATABASE.md](DATABASE.md).
 
 ---
 
@@ -141,10 +173,11 @@ A cobertura de testes foi dividida nas três principais categorias:
 
 ## Próximos Passos
 
-- Persistência local dos dados (Hive, SharedPreferences, etc).
+- ✅ ~~Persistência local dos dados~~ (Implementado com SQLite)
 - Filtros e estatísticas avançadas para o extrato.
 - Customização de categorias de ganhos/gastos.
 - Melhorias de acessibilidade e internacionalização.
+- Backup e sincronização de dados na nuvem.
 
 ---
 
