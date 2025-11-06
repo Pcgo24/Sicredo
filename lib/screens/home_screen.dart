@@ -1,17 +1,43 @@
 import 'package:flutter/material.dart';
+import '../data/models/transaction_model.dart';
+import '../data/repositories/transaction_repository.dart';
 
 class EntradaExtrato {
+  final int? id;
   final String nome;
   final double valor;
   final DateTime data;
   final bool isGanho;
 
   EntradaExtrato({
+    this.id,
     required this.nome,
     required this.valor,
     required this.data,
     required this.isGanho,
   });
+
+  // Factory to create from TransactionModel
+  factory EntradaExtrato.fromModel(TransactionModel model) {
+    return EntradaExtrato(
+      id: model.id,
+      nome: model.nome,
+      valor: model.valor,
+      data: model.data,
+      isGanho: model.isGanho,
+    );
+  }
+
+  // Convert to TransactionModel
+  TransactionModel toModel() {
+    return TransactionModel(
+      id: id,
+      nome: nome,
+      valor: valor,
+      data: data,
+      isGanho: isGanho,
+    );
+  }
 }
 
 class HomeScreen extends StatefulWidget {
@@ -24,6 +50,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double saldoTotal = 0.0;
   List<EntradaExtrato> extrato = [];
+  final TransactionRepository _repository = TransactionRepository();
+  bool _isLoading = true;
 
   late AnimationController _saldoController;
   late Animation<double> _saldoAnim;
@@ -37,6 +65,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     _saldoAnim = CurvedAnimation(parent: _saldoController, curve: Curves.elasticOut);
     _saldoController.forward();
+    _loadData();
+  }
+
+  /// Loads data from the database
+  Future<void> _loadData() async {
+    try {
+      final balance = await _repository.getSaldoTotal();
+      final transactions = await _repository.getAllTransactions();
+      
+      setState(() {
+        saldoTotal = balance;
+        extrato = transactions.map((t) => EntradaExtrato.fromModel(t)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao carregar dados: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -101,28 +156,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (_formKey.currentState?.validate() ?? false) {
                   _formKey.currentState?.save();
                   final valor = double.tryParse(valorInput.replaceAll(',', '.')) ?? 0.0;
-                  setState(() {
-                    if (isGanho) {
-                      saldoTotal += valor;
-                    } else {
-                      saldoTotal -= valor;
-                    }
-                    extrato.insert(
-                      0,
-                      EntradaExtrato(
-                        nome: nomeInput,
-                        valor: valor,
-                        data: DateTime.now(),
-                        isGanho: isGanho,
+                  
+                  // Close dialog first
+                  Navigator.of(context).pop();
+                  
+                  // Save to database
+                  try {
+                    final newTransaction = TransactionModel(
+                      nome: nomeInput,
+                      valor: valor,
+                      data: DateTime.now(),
+                      isGanho: isGanho,
+                    );
+                    
+                    final id = await _repository.insertTransaction(newTransaction);
+                    
+                    final newSaldo = isGanho ? saldoTotal + valor : saldoTotal - valor;
+                    await _repository.updateSaldoTotal(newSaldo);
+                    
+                    setState(() {
+                      saldoTotal = newSaldo;
+                      extrato.insert(
+                        0,
+                        EntradaExtrato(
+                          id: id,
+                          nome: nomeInput,
+                          valor: valor,
+                          data: DateTime.now(),
+                          isGanho: isGanho,
+                        ),
+                      );
+                      _saldoController.forward(from: 0); // animação ao atualizar saldo
+                    });
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erro ao salvar: $e'),
+                        backgroundColor: Colors.red,
                       ),
                     );
-                    _saldoController.forward(from: 0); // animação ao atualizar saldo
-                  });
-                  Navigator.of(context).pop();
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -178,9 +255,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: primaryColor,
+              ),
+            )
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             children: [
               ScaleTransition(
@@ -361,12 +444,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               child: Icon(Icons.delete, color: Colors.white, size: 28),
                             ),
                             direction: DismissDirection.endToStart,
-                            onDismissed: (_) {
-                              setState(() {
-                                saldoTotal += entry.isGanho ? -entry.valor : entry.valor;
-                                extrato.removeAt(index);
-                                _saldoController.forward(from: 0);
-                              });
+                            onDismissed: (_) async {
+                              final entryToDelete = entry;
+                              
+                              try {
+                                // Delete from database
+                                if (entryToDelete.id != null) {
+                                  await _repository.deleteTransaction(entryToDelete.id!);
+                                }
+                                
+                                final newSaldo = saldoTotal + (entryToDelete.isGanho ? -entryToDelete.valor : entryToDelete.valor);
+                                await _repository.updateSaldoTotal(newSaldo);
+                                
+                                setState(() {
+                                  saldoTotal = newSaldo;
+                                  extrato.removeAt(index);
+                                  _saldoController.forward(from: 0);
+                                });
+                              } catch (e) {
+                                // If error, reload from database
+                                await _loadData();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Erro ao deletar: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
                             },
                             child: InkWell(
                               onTap: () {

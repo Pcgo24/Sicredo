@@ -13,12 +13,16 @@ dependencies:
   fl_chart: ^1.0.0
   cupertino_icons: ^1.0.8
   http: ^1.2.0
+  sqflite: ^2.3.0
+  path_provider: ^2.1.1
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
+  sqflite_common_ffi: ^2.3.0
 
 
   # The "flutter_lints" package below contains a set of recommended lints to
