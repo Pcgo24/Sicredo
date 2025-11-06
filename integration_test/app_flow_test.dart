@@ -3,9 +3,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:sicredo/main.dart' as app;
 import 'package:sicredo/widgets/form_input.dart';
+import 'package:sicredo/data/database/database_helper.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize FFI for testing on non-mobile platforms
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    // Reset database before each test
+    await DatabaseHelper.instance.reset();
+  });
+
+  tearDown(() async {
+    // Clean up after each test
+    await DatabaseHelper.instance.close();
+  });
 
   group('Fluxos de Integração do App', () {
     testWidgets('TI-01: Fluxo de Welcome -> Auth -> Home',
