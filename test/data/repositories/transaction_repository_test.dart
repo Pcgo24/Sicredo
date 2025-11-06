@@ -107,6 +107,38 @@ void main() {
       expect(januaryTransactions.any((t) => t.nome == 'February'), false);
     });
 
+    test('getTransactionsByMonth should handle December correctly', () async {
+      final repository = TransactionRepository();
+      
+      await repository.insertTransaction(TransactionModel(
+        nome: 'December Early',
+        valor: 100.0,
+        data: DateTime(2024, 12, 1),
+        isGanho: true,
+      ));
+
+      await repository.insertTransaction(TransactionModel(
+        nome: 'December End',
+        valor: 50.0,
+        data: DateTime(2024, 12, 31, 23, 59, 59),
+        isGanho: false,
+      ));
+
+      await repository.insertTransaction(TransactionModel(
+        nome: 'January Next Year',
+        valor: 75.0,
+        data: DateTime(2025, 1, 1),
+        isGanho: true,
+      ));
+
+      final decemberTransactions = await repository.getTransactionsByMonth(12, 2024);
+
+      expect(decemberTransactions.length, 2);
+      expect(decemberTransactions.any((t) => t.nome == 'December Early'), true);
+      expect(decemberTransactions.any((t) => t.nome == 'December End'), true);
+      expect(decemberTransactions.any((t) => t.nome == 'January Next Year'), false);
+    });
+
     test('updateTransaction should modify existing transaction', () async {
       final repository = TransactionRepository();
       final transaction = TransactionModel(

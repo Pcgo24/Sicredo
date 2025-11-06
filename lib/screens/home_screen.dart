@@ -166,15 +166,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   
                   // Save to database
                   try {
+                    final now = DateTime.now();
                     final newTransaction = TransactionModel(
                       nome: nomeInput,
                       valor: valor,
-                      data: DateTime.now(),
+                      data: now,
                       isGanho: isGanho,
                     );
                     
                     final id = await _repository.insertTransaction(newTransaction);
                     
+                    // Note: Using current saldoTotal for calculation is safe in this UI context
+                    // as transactions are added one at a time. For concurrent scenarios,
+                    // consider using repository.calculateSaldoTotal() instead.
                     final newSaldo = isGanho ? saldoTotal + valor : saldoTotal - valor;
                     await _repository.updateSaldoTotal(newSaldo);
                     
@@ -186,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           id: id,
                           nome: nomeInput,
                           valor: valor,
-                          data: DateTime.now(),
+                          data: now,
                           isGanho: isGanho,
                         ),
                       );

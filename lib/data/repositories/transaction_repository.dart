@@ -37,7 +37,8 @@ class TransactionRepository {
     
     // Calculate start and end timestamps for the month
     final startDate = DateTime(year, month, 1);
-    final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+    // Calculate end of month by going to first day of next month and subtracting 1 microsecond
+    final endDate = DateTime(year, month + 1, 1).subtract(Duration(microseconds: 1));
     
     final List<Map<String, dynamic>> maps = await db.query(
       'transactions',
