@@ -108,11 +108,21 @@ lib/
 
 ## Persistência de Dados
 
-- **SQLite Database:** Implementado para persistência local de transações e saldo.
+- **Firebase Firestore:** Banco de dados em nuvem para persistência de transações e dados de usuário.
+- **Firebase Authentication:** Autenticação segura com Email/Senha e Google Sign-In.
 - **Repository Pattern:** Camada de abstração para operações de banco de dados.
-- **Models:** TransactionModel com serialização para/do banco de dados.
-- Os dados são persistidos automaticamente e carregados ao iniciar o app.
-- Para mais detalhes, veja [DATABASE.md](DATABASE.md).
+- **Models:** UserModel e TransactionModel com serialização Firestore (Timestamp, dateStr).
+- Os dados são sincronizados em tempo real e acessíveis de qualquer plataforma (Android, iOS, Web).
+- Para instruções de configuração, veja [README.firebase.md](README.firebase.md).
+
+---
+
+## Autenticação
+
+- **Email/Senha:** Cadastro e login com validação completa.
+- **Google Sign-In:** Autenticação rápida usando conta Google (Android, iOS, Web).
+- **Gerenciamento de Sessão:** Estado de autenticação persistido automaticamente.
+- **Segurança:** Regras de segurança Firestore restringem acesso apenas ao dono dos dados.
 
 ---
 
@@ -124,19 +134,48 @@ lib/
 
 ## Como rodar o projeto
 
+### Pré-requisitos
+
+- Flutter SDK (>=3.0.0)
+- Firebase CLI: `npm install -g firebase-tools`
+- FlutterFire CLI: `dart pub global activate flutterfire_cli`
+
+### Configuração
+
 1. Clone o repositório:
     ```sh
     git clone https://github.com/Pcgo24/Sicredo.git
     cd Sicredo
     ```
+
 2. Instale as dependências:
     ```sh
     flutter pub get
     ```
-3. Rode o app:
+
+3. Configure Firebase (veja [README.firebase.md](README.firebase.md) para detalhes):
+    ```sh
+    # Faça login no Firebase
+    firebase login
+    
+    # Configure o FlutterFire
+    flutterfire configure --project=sicredo-34f2e
+    
+    # Crie arquivo .env a partir do exemplo
+    cp .env.example .env
+    ```
+
+4. Configure os arquivos de plataforma:
+   - Android: `google-services.json` em `android/app/`
+   - iOS: `GoogleService-Info.plist` em `ios/Runner/`
+   - Web: Configuração automática via FlutterFire CLI
+
+5. Rode o app:
     ```sh
     flutter run
     ```
+
+Para instruções detalhadas de configuração Firebase, consulte [README.firebase.md](README.firebase.md).
 
 ---
 
@@ -173,11 +212,13 @@ A cobertura de testes foi dividida nas três principais categorias:
 
 ## Próximos Passos
 
-- ✅ ~~Persistência local dos dados~~ (Implementado com SQLite)
+- ✅ ~~Persistência local dos dados~~ (Migrado para Firebase Firestore)
+- ✅ ~~Autenticação de usuários~~ (Implementado com Firebase Auth)
+- ✅ ~~Sincronização na nuvem~~ (Implementado com Firestore)
 - Filtros e estatísticas avançadas para o extrato.
 - Customização de categorias de ganhos/gastos.
 - Melhorias de acessibilidade e internacionalização.
-- Backup e sincronização de dados na nuvem.
+- Notificações push para lembretes financeiros.
 
 ---
 
