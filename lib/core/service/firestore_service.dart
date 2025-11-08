@@ -24,6 +24,33 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _txCol =>
       _userRef.collection('transactions');
 
+  // Perfil do usuário: grava/atualiza nome e email
+  Future<void> upsertUserProfile({
+    required String name,
+    String? email,
+  }) async {
+    await _userRef.set(
+      {
+        'name': name,
+        if (email != null) 'email': email,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
+  // Nome do usuário em tempo real (com fallback para displayName/email do Auth)
+  Stream<String> userNameStream() {
+    return _userRef.snapshots().map((doc) {
+      final data = doc.data();
+      final name = data?['name'] as String?;
+      if (name != null && name.trim().isNotEmpty) return name;
+      // Fallbacks caso o Firestore não tenha nome
+      final authUser = _auth.currentUser;
+      return authUser?.displayName ?? authUser?.email ?? 'usuário';
+    });
+  }
+
   // Saldo em tempo real
   Stream<double> balanceStream() {
     return _userRef.snapshots().map((doc) {
