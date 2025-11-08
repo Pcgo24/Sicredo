@@ -69,6 +69,26 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Sicredo'),
         actions: [
+          // Avatar (foto do Google se existir; caso contrário, ícone padrão)
+          if (user != null)
+            StreamBuilder<Map<String, dynamic>?>(
+              stream: FirestoreService.instance.userDocStream(),
+              builder: (context, snapshot) {
+                final data = snapshot.data;
+                final photoUrl = (data?['photoUrl'] as String?) ?? user.photoURL;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundImage:
+                        (photoUrl != null && photoUrl.isNotEmpty) ? NetworkImage(photoUrl) : null,
+                    child: (photoUrl == null || photoUrl.isEmpty)
+                        ? const Icon(Icons.person, size: 18)
+                        : null,
+                  ),
+                );
+              },
+            ),
           IconButton(
             onPressed: () => AuthService.instance.signOut(),
             icon: const Icon(Icons.logout),

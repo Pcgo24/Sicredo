@@ -63,9 +63,11 @@ class _SignInScreenState extends State<SignInScreen> {
         // Atualiza displayName (Auth) e salva perfil no Firestore
         await cred.user?.updateDisplayName(name);
         await cred.user?.reload();
+
         await FirestoreService.instance.upsertUserProfile(
           name: name,
           email: email,
+          // sem foto (email/senha)
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -85,12 +87,13 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       await AuthService.instance.signInWithGoogle();
 
-      // Após login com Google, garanta que o perfil exista no Firestore
+      // Após login com Google, garante o perfil no Firestore com foto
       final u = FirebaseAuth.instance.currentUser;
       if (u != null) {
         await FirestoreService.instance.upsertUserProfile(
           name: u.displayName ?? 'Usuário',
           email: u.email,
+          photoUrl: u.photoURL,
         );
       }
     } on FirebaseAuthException catch (e) {
