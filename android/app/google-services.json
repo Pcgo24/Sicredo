@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "238737239859",
+    "project_id": "sicredo-34f2e",
+    "storage_bucket": "sicredo-34f2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:238737239859:android:7bdcfa3d1eb7a6f3299846",
+        "android_client_info": {
+          "package_name": "com.example.sicredo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "238737239859-g6nlj4aslh9si3d70b9a8q96bmmbt5gc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoLUG2xrB8C58LX3lltYQ0IDUGGJXs1_Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "238737239859-g6nlj4aslh9si3d70b9a8q96bmmbt5gc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "238737239859-bgva5stf1mqaohlun4dtfhgirt24di6l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.sicredo"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:238737239859:android:3add166aee71b62d299846",
+        "android_client_info": {
+          "package_name": "com.projetodswm.sicredo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "238737239859-g6nlj4aslh9si3d70b9a8q96bmmbt5gc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoLUG2xrB8C58LX3lltYQ0IDUGGJXs1_Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "238737239859-g6nlj4aslh9si3d70b9a8q96bmmbt5gc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "238737239859-bgva5stf1mqaohlun4dtfhgirt24di6l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.sicredo"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
