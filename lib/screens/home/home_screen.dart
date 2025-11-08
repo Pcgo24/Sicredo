@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
 import '../../domain/models/transaction_model.dart';
+import '../cotacoes/cotacoes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,12 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (kind == 'income') {
         await FirestoreService.instance.addIncome(
           v,
-          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          description:
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         );
       } else {
         await FirestoreService.instance.addExpense(
           v,
-          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          description:
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         );
       }
       _amountCtrl.clear();
@@ -75,13 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
               stream: FirestoreService.instance.userDocStream(),
               builder: (context, snapshot) {
                 final data = snapshot.data;
-                final photoUrl = (data?['photoUrl'] as String?) ?? user.photoURL;
+                final photoUrl =
+                    (data?['photoUrl'] as String?) ?? user.photoURL;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: CircleAvatar(
                     radius: 16,
-                    backgroundImage:
-                        (photoUrl != null && photoUrl.isNotEmpty) ? NetworkImage(photoUrl) : null,
+                    backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                        ? NetworkImage(photoUrl)
+                        : null,
                     child: (photoUrl == null || photoUrl.isEmpty)
                         ? const Icon(Icons.person, size: 18)
                         : null,
@@ -89,6 +94,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CotacoesScreen()),
+              );
+            },
+            icon: const Icon(Icons.currency_exchange),
+            tooltip: 'Ver cotações',
+          ),
           IconButton(
             onPressed: () => AuthService.instance.signOut(),
             icon: const Icon(Icons.logout),
@@ -122,11 +136,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Saldo atual', style: TextStyle(fontSize: 18)),
+                        const Text('Saldo atual',
+                            style: TextStyle(fontSize: 18)),
                         Text('R\$ ${bal.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 20,
-                              color: bal >= 0 ? Colors.green[700] : Colors.red[700],
+                              color: bal >= 0
+                                  ? Colors.green[700]
+                                  : Colors.red[700],
                               fontWeight: FontWeight.bold,
                             )),
                       ],
@@ -147,7 +164,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Valor (ex.: 100.50)',
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -183,7 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
             Expanded(
               child: StreamBuilder<List<LedgerTransaction>>(
-                stream: FirestoreService.instance.transactionsStream(limit: 100),
+                stream:
+                    FirestoreService.instance.transactionsStream(limit: 100),
                 builder: (context, snapshot) {
                   final items = snapshot.data ?? [];
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -204,7 +223,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                           color: isIncome ? Colors.green : Colors.red,
                         ),
-                        title: Text(t.description ?? (isIncome ? 'Entrada' : 'Gasto')),
+                        title: Text(
+                            t.description ?? (isIncome ? 'Entrada' : 'Gasto')),
                         subtitle: t.createdAt != null
                             ? Text('${t.createdAt}')
                             : const Text('Aguardando servidor'),
