@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/service/auth_service.dart';
+import '../../core/service/firestore_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -58,8 +59,14 @@ class _SignInScreenState extends State<SignInScreen> {
           email: email,
           password: password,
         );
+
+        // Atualiza displayName (Auth) e salva perfil no Firestore
         await cred.user?.updateDisplayName(name);
         await cred.user?.reload();
+        await FirestoreService.instance.upsertUserProfile(
+          name: name,
+          email: email,
+        );
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
@@ -77,6 +84,15 @@ class _SignInScreenState extends State<SignInScreen> {
     });
     try {
       await AuthService.instance.signInWithGoogle();
+
+      // Após login com Google, garanta que o perfil exista no Firestore
+      final u = FirebaseAuth.instance.currentUser;
+      if (u != null) {
+        await FirestoreService.instance.upsertUserProfile(
+          name: u.displayName ?? 'Usuário',
+          email: u.email,
+        );
+      }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
@@ -142,15 +158,12 @@ class _SignInScreenState extends State<SignInScreen> {
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
                       ),
                       onPressed: () => setState(
                         () => _obscurePassword = !_obscurePassword,
                       ),
-                      tooltip:
-                          _obscurePassword ? 'Mostrar senha' : 'Ocultar senha',
+                      tooltip: _obscurePassword ? 'Mostrar senha' : 'Ocultar senha',
                     ),
                   ),
                   obscureText: _obscurePassword,
@@ -164,9 +177,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirm
-                              ? Icons.visibility
-                              : Icons.visibility_off,
+                          _obscureConfirm ? Icons.visibility : Icons.visibility_off,
                         ),
                         onPressed: () => setState(
                           () => _obscureConfirm = !_obscureConfirm,

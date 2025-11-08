@@ -36,9 +36,15 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Informe um valor numérico positivo');
       }
       if (kind == 'income') {
-        await FirestoreService.instance.addIncome(v, description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim());
+        await FirestoreService.instance.addIncome(
+          v,
+          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        );
       } else {
-        await FirestoreService.instance.addExpense(v, description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim());
+        await FirestoreService.instance.addExpense(
+          v,
+          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        );
       }
       _amountCtrl.clear();
       _descCtrl.clear();
@@ -75,9 +81,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             if (user != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Olá, ${user.email ?? user.displayName ?? 'usuário'}'),
+              StreamBuilder<String>(
+                stream: FirestoreService.instance.userNameStream(),
+                builder: (context, snapshot) {
+                  final name = snapshot.data ?? (user.displayName ?? 'usuário');
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Olá, $name'),
+                  );
+                },
               ),
             const SizedBox(height: 8),
             StreamBuilder<double>(

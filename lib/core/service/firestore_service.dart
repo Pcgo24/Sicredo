@@ -47,7 +47,9 @@ class FirestoreService {
       if (name != null && name.trim().isNotEmpty) return name;
       // Fallbacks caso o Firestore não tenha nome
       final authUser = _auth.currentUser;
-      return authUser?.displayName ?? authUser?.email ?? 'usuário';
+      return authUser?.displayName ??
+          authUser?.email ??
+          'usuário';
     });
   }
 
