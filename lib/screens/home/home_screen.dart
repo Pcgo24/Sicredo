@@ -36,9 +36,15 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Informe um valor numérico positivo');
       }
       if (kind == 'income') {
-        await FirestoreService.instance.addIncome(v, description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim());
+        await FirestoreService.instance.addIncome(
+          v,
+          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        );
       } else {
-        await FirestoreService.instance.addExpense(v, description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim());
+        await FirestoreService.instance.addExpense(
+          v,
+          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        );
       }
       _amountCtrl.clear();
       _descCtrl.clear();
@@ -63,6 +69,26 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Sicredo'),
         actions: [
+          // Avatar (foto do Google se existir; caso contrário, ícone padrão)
+          if (user != null)
+            StreamBuilder<Map<String, dynamic>?>(
+              stream: FirestoreService.instance.userDocStream(),
+              builder: (context, snapshot) {
+                final data = snapshot.data;
+                final photoUrl = (data?['photoUrl'] as String?) ?? user.photoURL;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundImage:
+                        (photoUrl != null && photoUrl.isNotEmpty) ? NetworkImage(photoUrl) : null,
+                    child: (photoUrl == null || photoUrl.isEmpty)
+                        ? const Icon(Icons.person, size: 18)
+                        : null,
+                  ),
+                );
+              },
+            ),
           IconButton(
             onPressed: () => AuthService.instance.signOut(),
             icon: const Icon(Icons.logout),
@@ -75,9 +101,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             if (user != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Olá, ${user.email ?? user.displayName ?? 'usuário'}'),
+              StreamBuilder<String>(
+                stream: FirestoreService.instance.userNameStream(),
+                builder: (context, snapshot) {
+                  final name = snapshot.data ?? (user.displayName ?? 'usuário');
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Olá, $name'),
+                  );
+                },
               ),
             const SizedBox(height: 8),
             StreamBuilder<double>(

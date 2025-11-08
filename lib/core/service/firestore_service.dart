@@ -24,6 +24,45 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _txCol =>
       _userRef.collection('transactions');
 
+  // Perfil do usuário: grava/atualiza nome, email e foto.
+  // createdAt só é definido na primeira gravação (não sobrescreve em updates).
+  Future<void> upsertUserProfile({
+    required String name,
+    String? email,
+    String? photoUrl,
+  }) async {
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(_userRef);
+      final Map<String, dynamic> data = {
+        'name': name,
+        if (email != null) 'email': email,
+        if (photoUrl != null) 'photoUrl': photoUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      final hasCreatedAt = snap.exists && (snap.data()?['createdAt'] is Timestamp);
+      if (!hasCreatedAt) {
+        data['createdAt'] = FieldValue.serverTimestamp();
+      }
+      tx.set(_userRef, data, SetOptions(merge: true));
+    });
+  }
+
+  // Documento completo do usuário (para ler nome e foto na Home)
+  Stream<Map<String, dynamic>?> userDocStream() {
+    return _userRef.snapshots().map((doc) => doc.data());
+  }
+
+  // Nome em tempo real com fallback ao Auth
+  Stream<String> userNameStream() {
+    return _userRef.snapshots().map((doc) {
+      final data = doc.data();
+      final name = data?['name'] as String?;
+      if (name != null && name.trim().isNotEmpty) return name;
+      final authUser = _auth.currentUser;
+      return authUser?.displayName ?? authUser?.email ?? 'usuário';
+    });
+  }
+
   // Saldo em tempo real
   Stream<double> balanceStream() {
     return _userRef.snapshots().map((doc) {
@@ -61,7 +100,6 @@ class FirestoreService {
 
     // Atualiza saldo e registra transação de forma atômica
     await _db.runTransaction((transaction) async {
-      // Atualiza saldo com FieldValue.increment (positivo para income, negativo para expense)
       final delta = kind == 'income' ? amount : -amount;
       transaction.set(
         _userRef,
@@ -71,7 +109,7 @@ class FirestoreService {
 
       transaction.set(txRef, {
         'type': kind,
-        'amount': amount, // guardamos positivo e derivamos o sinal pelo tipo
+        'amount': amount,
         'description': description,
         'createdAt': FieldValue.serverTimestamp(),
       });
