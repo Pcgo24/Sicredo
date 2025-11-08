@@ -39,9 +39,14 @@ add_definitions(-DUNICODE -D_UNICODE)
 # of modifying this function.
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
-  target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
+  # Use warning level 4 but do NOT treat warnings as errors (/WX) because
+  # third-party plugin sources (e.g. Firebase C++ SDK) may trigger
+  # deprecation warnings that would otherwise break the build.
+  target_compile_options(${TARGET} PRIVATE /W4 /wd"4100")
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
+  # Suppress MSVC deprecation warnings like 'strncpy' in third-party code.
+  target_compile_definitions(${TARGET} PRIVATE "_CRT_SECURE_NO_WARNINGS")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 endfunction()
 

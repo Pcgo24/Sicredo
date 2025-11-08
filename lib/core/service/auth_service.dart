@@ -32,16 +32,37 @@ class AuthService {
         ..setCustomParameters({'prompt': 'select_account'});
       return _auth.signInWithPopup(provider);
     } else {
-      final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
-      if (gUser == null) {
-        throw Exception('Login com Google cancelado');
+      try {
+        // Use the new API: authenticate() starts an interactive sign-in and
+        // returns a GoogleSignInAccount on success.
+        final GoogleSignInAccount gUser =
+            await GoogleSignIn.instance.authenticate(scopeHint: ['email']);
+
+        // The authentication object currently exposes only the idToken.
+        final String? idToken = gUser.authentication.idToken;
+
+        // If an access token is required, request client authorization for
+        // the desired scopes. This may prompt the user.
+        String? accessToken;
+        final clientAuth = await gUser.authorizationClient
+            .authorizationForScopes(['email', 'profile', 'openid']);
+        if (clientAuth != null) {
+          accessToken = clientAuth.accessToken;
+        }
+
+        final credential = GoogleAuthProvider.credential(
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+        return _auth.signInWithCredential(credential);
+      } on Exception catch (e) {
+        // Map cancellation to a friendlier message; rethrow other errors.
+        if (e is GoogleSignInException &&
+            e.code == GoogleSignInExceptionCode.canceled) {
+          throw Exception('Login com Google cancelado');
+        }
+        rethrow;
       }
-      final gAuth = await gUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: gAuth.accessToken,
-        idToken: gAuth.idToken,
-      );
-      return _auth.signInWithCredential(credential);
     }
   }
 
